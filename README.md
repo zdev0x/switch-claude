@@ -170,6 +170,9 @@ chmod +x switch-claude.sh
   }
 ]
 
+```
+
+
 ## 📋 依赖环境
 
 ### 必需依赖
