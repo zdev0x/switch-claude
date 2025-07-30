@@ -7,7 +7,7 @@
 
 ## ✨ 功能特性
 
-- 🔧 **YAML配置格式** - 简单易读的配置文件格式
+- 🔧 **JSON配置格式** - 简单易读的配置文件格式
 - 🔄 **多配置管理** - 支持多个 API URL 和密钥的配置切换
 - 💾 **自动备份** - 切换前自动备份当前配置
 - 🎨 **彩色输出** - 友好的用户界面体验
@@ -29,48 +29,52 @@ cd switch-claude
 #### Ubuntu/Debian
 ```bash
 sudo apt-get update
-sudo apt-get install jq python3 python3-pip
-pip3 install PyYAML
+sudo apt-get install jq
 ```
 
 #### CentOS/RHEL
 ```bash
 sudo yum install epel-release
-sudo yum install jq python3 python3-pip
-pip3 install PyYAML
+sudo yum install jq
 ```
 
 #### macOS
 ```bash
-brew install jq python3
-pip3 install PyYAML
+brew install jq
 ```
 
 ### 3. 配置文件设置
 
-在项目目录下创建或编辑 `configs.yaml` 配置文件：
+在项目目录下创建或编辑 `config.json` 配置文件：
 
-```yaml
-configs:
-  - name: "work"
-    description: "挺稳定的-适合长期使用-不需要频繁切换"
-    ANTHROPIC_BASE_URL: "https://api.anthropic.com"
-    ANTHROPIC_AUTH_TOKEN: "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    
-  - name: "personal"
-    description: "个人使用配置"
-    ANTHROPIC_BASE_URL: "https://ccr-dev.lfree.org/api/"
-    ANTHROPIC_AUTH_TOKEN: "cr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    
-  - name: "dev"
-    description: "开发测试配置"
-    ANTHROPIC_BASE_URL: "https://dev-api.example.com/v1/"
-    ANTHROPIC_AUTH_TOKEN: "dev_token_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    
-  - name: "backup"
-    description: "备用配置"
-    ANTHROPIC_BASE_URL: "https://backup-api.example.com/"
-    ANTHROPIC_AUTH_TOKEN: "backup_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```json
+[
+  {
+    "name": "work",
+    "description": "工作环境配置",
+    "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
+    "ANTHROPIC_AUTH_TOKEN": "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "personal",
+    "description": "个人使用配置",
+    "ANTHROPIC_BASE_URL": "https://ccr-dev.lfree.org/api/",
+    "ANTHROPIC_AUTH_TOKEN": "cr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "dev",
+    "description": "开发测试配置",
+    "ANTHROPIC_BASE_URL": "https://dev-api.example.com/v1/",
+    "ANTHROPIC_AUTH_TOKEN": "dev_token_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "backup",
+    "description": "备用配置",
+    "ANTHROPIC_BASE_URL": "https://backup-api.example.com/",
+    "ANTHROPIC_AUTH_TOKEN": "backup_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+]
+
 ```
 
 ### 4. 基本使用
@@ -115,67 +119,67 @@ chmod +x switch-claude.sh
 
 ```bash
 # 使用指定的配置文件
-./switch-claude.sh -f my-configs.yaml work
-./switch-claude.sh --file team-configs.yml dev
+./switch-claude.sh -f my-config.json work
+./switch-claude.sh --file team-config.json dev
 
 # 列出指定文件中的配置
-./switch-claude.sh -l -f my-configs.yaml
+./switch-claude.sh -l -f my-config.json
 
 # 组合使用
-./switch-claude.sh --file prod-configs.yml --list
+./switch-claude.sh --file prod-config.json --list
 ```
 
 ## ⚙️ 配置文件格式
 
-### YAML配置结构
+### JSON配置结构
 
-配置文件必须包含一个名为 `configs` 的数组，每个配置项包含以下字段：
+配置文件必须是一个JSON数组，每个配置项包含以下字段：
 
-```yaml
-configs:
-  - name: "配置名称"           # 必需：配置的唯一标识符
-    description: "配置描述"     # 可选：配置的说明文字
-    ANTHROPIC_BASE_URL: "API地址"        # 必需：API端点URL
-    ANTHROPIC_AUTH_TOKEN: "认证令牌"     # 必需：API密钥
+```json
+[
+  {
+    "name": "配置名称",           // 必需：配置的唯一标识符
+    "description": "配置描述",     // 可选：配置的说明文字
+    "ANTHROPIC_BASE_URL": "API地址",        // 必需：API端点URL
+    "ANTHROPIC_AUTH_TOKEN": "认证令牌"     // 必需：API密钥
+  }
+]
 ```
 
 ### 完整配置示例
 
-```yaml
-configs:
-  # 官方API配置
-  - name: "official"
-    description: "Anthropic官方API"
-    ANTHROPIC_BASE_URL: "https://api.anthropic.com"
-    ANTHROPIC_AUTH_TOKEN: "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    
-  # 代理服务配置
-  - name: "proxy"
-    description: "国内代理服务"
-    ANTHROPIC_BASE_URL: "https://ccr-dev.lfree.org/api/"
-    ANTHROPIC_AUTH_TOKEN: "cr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    
-  # 开发环境配置
-  - name: "dev"
-    description: "开发测试环境"
-    ANTHROPIC_BASE_URL: "https://dev-api.company.com/v1/"
-    ANTHROPIC_AUTH_TOKEN: "dev_token_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-```
+```json
+[
+  {
+    "name": "official",
+    "description": "Anthropic官方API",
+    "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
+    "ANTHROPIC_AUTH_TOKEN": "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "proxy",
+    "description": "国内代理服务",
+    "ANTHROPIC_BASE_URL": "https://ccr-dev.lfree.org/api/",
+    "ANTHROPIC_AUTH_TOKEN": "cr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "dev",
+    "description": "开发测试环境",
+    "ANTHROPIC_BASE_URL": "https://dev-api.company.com/v1/",
+    "ANTHROPIC_AUTH_TOKEN": "dev_token_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+]
 
 ## 📋 依赖环境
 
 ### 必需依赖
 
-- **jq** - 用于处理内部JSON数据转换
-- **python3** - 用于解析YAML配置文件
-- **PyYAML** - Python的YAML解析库
+- **jq** - 用于处理JSON数据解析和转换
 
 ### 验证安装
 
 ```bash
 jq --version
-python3 --version
-python3 -c "import yaml; print('PyYAML installed successfully')"
 ```
 
 ## 📚 使用示例场景
@@ -201,10 +205,10 @@ python3 -c "import yaml; print('PyYAML installed successfully')"
 ### 场景3：多团队配置
 ```bash
 # 使用团队A的配置文件
-./switch-claude.sh -f team-a-configs.yaml work
+./switch-claude.sh -f team-a-config.json work
 
 # 使用团队B的配置文件
-./switch-claude.sh -f team-b-configs.yaml dev
+./switch-claude.sh -f team-b-config.json dev
 ```
 
 ## 🔐 安全特性
@@ -222,11 +226,11 @@ python3 -c "import yaml; print('PyYAML installed successfully')"
 ### 安全建议
 ```bash
 # 设置配置文件权限
-chmod 600 configs.yaml
+chmod 600 config.json
 
 # 避免将配置文件提交到版本控制
-echo "configs.yaml" >> .gitignore
-echo "*.yml" >> .gitignore
+echo "config.json" >> .gitignore
+echo "*.json" >> .gitignore
 ```
 
 ## 🛠️ 故障排除
@@ -238,20 +242,16 @@ echo "*.yml" >> .gitignore
 # 错误：command not found: jq
 sudo apt-get install jq
 
-# 错误：command not found: python3
-sudo apt-get install python3
-
-# 错误：No module named 'yaml'
-pip3 install PyYAML
+# 错误：JSON格式错误
 ```
 
 #### 2. 配置文件格式错误
 ```bash
-# 检查YAML语法
-python3 -c "import yaml; yaml.safe_load(open('configs.yaml'))"
+# 检查JSON语法
+jq . config.json
 
-# 常见错误：缺少configs数组
-# 确保配置文件以 configs: 开头
+# 常见错误：配置文件不是数组格式
+# 确保配置文件是JSON数组格式
 ```
 
 #### 3. 权限问题
@@ -278,12 +278,7 @@ chmod 644 ~/.claude/settings.json
 
 ```bash
 # 检查配置文件解析
-python3 -c "
-import yaml, json
-with open('configs.yaml') as f:
-    data = yaml.safe_load(f)
-print(json.dumps(data['configs'], indent=2))
-"
+jq . config.json
 
 # 检查jq是否正常工作
 echo '{"test": "value"}' | jq .
@@ -297,10 +292,9 @@ cat ~/.claude/settings.json | jq .
 ```
 switch-claude/
 ├── switch-claude.sh      # 主脚本文件
-├── configs.yaml          # YAML配置文件
-├── 配置切换说明.md       # 详细说明文档
+├── config.json           # JSON配置文件
 ├── README.md             # 项目说明文档
-└── other-configs.yml     # 其他配置文件（可选）
+└── other-config.json     # 其他配置文件（可选）
 ```
 
 ## 🤝 贡献指南
@@ -327,7 +321,7 @@ switch-claude/
 ## 🔗 相关链接
 
 - [Claude Code 官方文档](https://docs.anthropic.com/en/docs/claude-code)
-- [YAML 语法参考](https://yaml.org/spec/)
+- [JSON 语法参考](https://www.json.org/json-zh.html)
 - [jq 命令手册](https://jqlang.github.io/jq/)
 
 ## 📞 支持
@@ -340,10 +334,10 @@ switch-claude/
 
 ## 📊 更新日志
 
-- **v1.3** - 简化为只支持YAML格式，提升性能
+- **v1.3** - 只支持JSON格式，简化依赖，提升性能
 - **v1.2** - 修复bash兼容性问题，支持更多shell环境  
 - **v1.1** - 添加多配置文件支持，改进错误处理
-- **v1.0** - 初始版本，支持JSON和YAML格式
+- **v1.0** - 初始版本，支持JSON格式
 
 ---
 

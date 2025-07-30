@@ -2,7 +2,7 @@
 
 # Claude配置切换脚本
 # 用于更改 ~/.claude/settings.json 配置文件中的 ANTHROPIC_BASE_URL 和 ANTHROPIC_AUTH_TOKEN 变量
-# 支持多个key和API URL的数组配置格式
+# 支持多个key和API URL的JSON数组配置格式
 # 
 # 项目地址: https://github.com/zdev0x/switch-claude.git
 # 用法: ./switch-claude.sh <配置名称>
@@ -34,24 +34,29 @@ show_help() {
     echo "  $0 -h, --help         # 显示帮助信息"
     echo ""
     echo "配置文件目录: 当前目录"
-    echo "支持的配置文件格式: .yaml, .yml (数组格式)"
+    echo "支持的配置文件格式: .json (JSON数组格式)"
     echo ""
-    echo "YAML配置文件格式示例:"
-    echo 'configs:'
-    echo '  - name: "work"'
-    echo '    description: "工作环境"'
-    echo '    ANTHROPIC_BASE_URL: "https://api.anthropic.com"'
-    echo '    ANTHROPIC_AUTH_TOKEN: "sk-ant-..."'
-    echo '  - name: "personal"'
-    echo '    description: "个人环境"'
-    echo '    ANTHROPIC_BASE_URL: "https://other-api.com"'
-    echo '    ANTHROPIC_AUTH_TOKEN: "cr_..."'
+    echo "JSON配置文件格式示例:"
+    echo '['
+    echo '  {'
+    echo '    "name": "work",'
+    echo '    "description": "工作环境",'
+    echo '    "ANTHROPIC_BASE_URL": "https://api.anthropic.com",'
+    echo '    "ANTHROPIC_AUTH_TOKEN": "sk-ant-..."'
+    echo '  },'
+    echo '  {'
+    echo '    "name": "personal",'
+    echo '    "description": "个人环境",'
+    echo '    "ANTHROPIC_BASE_URL": "https://other-api.com",'
+    echo '    "ANTHROPIC_AUTH_TOKEN": "cr_..."'
+    echo '  }'
+    echo ']'
     echo ""
     echo "示例:"
     echo "  $0 work               # 切换到work配置"
     echo "  $0 personal           # 切换到personal配置"
     echo "  $0 -l                 # 列出所有配置"
-    echo "  $0 -f configs.yaml work # 使用指定文件切换到work配置"
+    echo "  $0 -f config.json work # 使用指定文件切换到work配置"
 }
 
 # 列出所有可用配置
@@ -78,19 +83,16 @@ list_configs() {
             return 1
         fi
     else
-        # 搜索所有配置文件
-        for ext in yaml yml; do
-            for file in "$CONFIGS_DIR"/*."$ext"; do
-                if [ -f "$file" ]; then
-                    files_to_check+=("$file")
-                fi
-            done
+        # 搜索所有JSON配置文件
+        for file in "$CONFIGS_DIR"/*.json; do
+            if [ -f "$file" ]; then
+                files_to_check+=("$file")
+            fi
         done
     fi
     
     for file in "${files_to_check[@]}"; do
         local filename=$(basename "$file")
-        local ext="${file##*.}"
         
         echo -e "${CYAN}文件: $filename${NC}"
         
@@ -118,9 +120,9 @@ list_configs() {
     if [ $found -eq 0 ]; then
         echo -e "${YELLOW}未找到有效的配置文件${NC}"
         echo ""
-        echo "请在当前目录下创建YAML格式的配置文件，例如:"
-        echo "  ./configs.yaml"
-        echo "  ./claude-configs.yml"
+        echo "请在当前目录下创建JSON格式的配置文件，例如:"
+        echo "  ./config.json"
+        echo "  ./claude-configs.json"
     fi
 }
 
@@ -135,6 +137,45 @@ show_current() {
     local base_url=$(jq -r '.env.ANTHROPIC_BASE_URL // "未设置"' "$CLAUDE_SETTINGS_FILE")
     local auth_token=$(jq -r '.env.ANTHROPIC_AUTH_TOKEN // "未设置"' "$CLAUDE_SETTINGS_FILE")
     
+    # 尝试从配置文件中查找匹配的配置
+    local config_name="未知"
+    local config_description="未设置"
+    local config_found=0
+    
+    # 搜索所有JSON配置文件
+    for file in "$CONFIGS_DIR"/*.json; do
+        if [ -f "$file" ]; then
+            local configs_data
+            configs_data=$(parse_configs_file "$file")
+            if [ $? -eq 0 ]; then
+                local config_count=$(echo "$configs_data" | jq -r '. | length')
+                
+                for ((i=0; i<config_count; i++)); do
+                    local config=$(echo "$configs_data" | jq -r ".[$i]")
+                    local cfg_base_url=$(echo "$config" | jq -r '.ANTHROPIC_BASE_URL')
+                    local cfg_auth_token=$(echo "$config" | jq -r '.ANTHROPIC_AUTH_TOKEN')
+                    
+                    if [ "$cfg_base_url" = "$base_url" ] && [ "$cfg_auth_token" = "$auth_token" ]; then
+                        config_name=$(echo "$config" | jq -r '.name')
+                        config_description=$(echo "$config" | jq -r '.description // "无描述"')
+                        config_found=1
+                        break
+                    fi
+                done
+                
+                if [ $config_found -eq 1 ]; then
+                    break
+                fi
+            fi
+        fi
+    done
+    
+    # 显示配置信息
+    if [ $config_found -eq 1 ]; then
+        echo -e "  name: ${GREEN}$config_name${NC}"
+        echo -e "  description: ${CYAN}$config_description${NC}"
+    fi
+    
     echo -e "  ANTHROPIC_BASE_URL: ${GREEN}$base_url${NC}"
     if [ "$auth_token" != "未设置" ] && [ ${#auth_token} -gt 20 ]; then
         echo -e "  ANTHROPIC_AUTH_TOKEN: ${GREEN}${auth_token:0:20}...${NC}"
@@ -143,31 +184,24 @@ show_current() {
     fi
 }
 
-# 解析YAML格式的配置文件
+# 解析JSON格式的配置文件
 parse_configs_file() {
     local config_file="$1"
     
-    if ! command -v python3 >/dev/null 2>&1; then
-        echo "Error: 需要安装 python3 来解析 YAML 文件" >&2
+    if ! jq -e . "$config_file" >/dev/null 2>&1; then
+        echo "Error: JSON格式错误或文件不存在: $config_file" >&2
         return 1
     fi
     
-    python3 -c "
-import yaml, json, sys
-try:
-    with open('$config_file', 'r', encoding='utf-8') as f:
-        data = yaml.safe_load(f)
-    if not data or 'configs' not in data or not isinstance(data['configs'], list):
-        print('Error: YAML配置文件必须包含 configs 数组', file=sys.stderr)
-        sys.exit(1)
-    print(json.dumps(data['configs']))
-except yaml.YAMLError as e:
-    print(f'Error: YAML解析错误: {e}', file=sys.stderr)
-    sys.exit(1)
-except Exception as e:
-    print(f'Error: {e}', file=sys.stderr)
-    sys.exit(1)
-"
+    local configs_data=$(jq -c . "$config_file")
+    
+    # 检查是否是数组
+    if ! echo "$configs_data" | jq -e 'type == "array"' >/dev/null 2>&1; then
+        echo "Error: JSON配置文件必须是数组格式" >&2
+        return 1
+    fi
+    
+    echo "$configs_data"
 }
 
 # 从配置数组中查找特定配置
@@ -211,18 +245,16 @@ switch_config() {
             return 1
         fi
     else
-        # 默认搜索所有配置文件
-        for ext in yaml yml; do
-            for file in "$CONFIGS_DIR"/*."$ext"; do
-                if [ -f "$file" ]; then
-                    files_to_search+=("$file")
-                fi
-            done
+        # 默认搜索所有JSON配置文件
+        for file in "$CONFIGS_DIR"/*.json; do
+            if [ -f "$file" ]; then
+                files_to_search+=("$file")
+            fi
         done
     fi
     
     if [ ${#files_to_search[@]} -eq 0 ]; then
-        echo -e "${RED}错误: 未找到配置文件${NC}"
+        echo -e "${RED}错误: 未找到JSON配置文件${NC}"
         return 1
     fi
     
@@ -318,10 +350,6 @@ check_dependencies() {
         missing_deps+=("jq")
     fi
     
-    if ! command -v python3 &> /dev/null; then
-        missing_deps+=("python3")
-    fi
-    
     if [ ${#missing_deps[@]} -ne 0 ]; then
         echo -e "${RED}错误: 缺少必要依赖:${NC}"
         for dep in "${missing_deps[@]}"; do
@@ -329,19 +357,9 @@ check_dependencies() {
         done
         echo ""
         echo "请安装缺少的依赖:"
-        echo "  Ubuntu/Debian: sudo apt-get install jq python3 python3-pip"
-        echo "  CentOS/RHEL: sudo yum install jq python3 python3-pip"
-        echo "  macOS: brew install jq python3"
-        echo ""
-        echo "然后安装Python YAML库:"
-        echo "  pip3 install PyYAML"
-        return 1
-    fi
-    
-    # 检查Python YAML库
-    if ! python3 -c "import yaml" 2>/dev/null; then
-        echo -e "${RED}错误: Python yaml库未安装${NC}"
-        echo "安装命令: pip3 install PyYAML"
+        echo "  Ubuntu/Debian: sudo apt-get install jq"
+        echo "  CentOS/RHEL: sudo yum install jq"
+        echo "  macOS: brew install jq"
         return 1
     fi
 }
