@@ -1,0 +1,20 @@
+configs:
+  - name: "work"
+    description: "工作环境配置"
+    ANTHROPIC_BASE_URL: "https://api.anthropic.com"
+    ANTHROPIC_AUTH_TOKEN: "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+  - name: "personal"
+    description: "个人使用配置"
+    ANTHROPIC_BASE_URL: "https://ccr-dev.lfree.org/api/"
+    ANTHROPIC_AUTH_TOKEN: "cr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+  - name: "dev"
+    description: "开发测试配置"
+    ANTHROPIC_BASE_URL: "https://dev-api.example.com/v1/"
+    ANTHROPIC_AUTH_TOKEN: "dev_token_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+  - name: "backup"
+    description: "备用配置"
+    ANTHROPIC_BASE_URL: "https://backup-api.example.com/"
+    ANTHROPIC_AUTH_TOKEN: "backup_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
