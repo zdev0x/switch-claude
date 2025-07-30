@@ -12,7 +12,53 @@ set +o nounset
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_SETTINGS_FILE="$HOME/.claude/settings.json"
-CONFIGS_DIR="$(pwd)"
+
+# 按优先级查找配置文件位置
+find_config_paths() {
+    local config_paths=()
+    
+    # 1. 当前目录的 config.json
+    if [ -f "$(pwd)/config.json" ]; then
+        config_paths+=("$(pwd)/config.json")
+    fi
+    
+    # 2. ~/.config/switch-claude/ 目录下的配置文件
+    if [ -d "$HOME/.config/switch-claude" ]; then
+        for file in "$HOME/.config/switch-claude"/*.json; do
+            if [ -f "$file" ]; then
+                config_paths+=("$file")
+            fi
+        done
+    fi
+    
+    # 3. ~/.switch-claude.json
+    if [ -f "$HOME/.switch-claude.json" ]; then
+        config_paths+=("$HOME/.switch-claude.json")
+    fi
+    
+    # 4. 如果都没找到，检查当前目录的其他 .json 文件
+    if [ ${#config_paths[@]} -eq 0 ]; then
+        for file in "$(pwd)"/*.json; do
+            if [ -f "$file" ]; then
+                config_paths+=("$file")
+            fi
+        done
+    fi
+    
+    printf '%s\n' "${config_paths[@]}"
+}
+
+# 获取配置文件的目录（用于兼容性）
+get_config_dir() {
+    local config_files=($(find_config_paths))
+    if [ ${#config_files[@]} -gt 0 ]; then
+        dirname "${config_files[0]}"
+    else
+        pwd
+    fi
+}
+
+CONFIGS_DIR="$(get_config_dir)"
 
 # 颜色输出
 RED='\033[0;31m'
@@ -33,7 +79,12 @@ show_help() {
     echo "  $0 -f, --file <文件>  # 指定配置文件"
     echo "  $0 -h, --help         # 显示帮助信息"
     echo ""
-    echo "配置文件目录: 当前目录"
+    echo "配置文件查找顺序:"
+    echo "  1. 当前目录/config.json"
+    echo "  2. ~/.config/switch-claude/*.json"
+    echo "  3. ~/.switch-claude.json"
+    echo "  4. 当前目录/*.json"
+    echo ""
     echo "支持的配置文件格式: .json (JSON数组格式)"
     echo ""
     echo "JSON配置文件格式示例:"
@@ -65,36 +116,58 @@ list_configs() {
     
     echo -e "${BLUE}可用配置:${NC}"
     
-    if [ ! -d "$CONFIGS_DIR" ]; then
-        echo -e "${RED}配置目录不存在: $CONFIGS_DIR${NC}"
-        echo -e "${YELLOW}请确保在正确的目录中运行脚本${NC}"
-        return 1
-    fi
-    
     local found=0
     local files_to_check=()
     
     if [ -n "$config_file" ]; then
-        # 指定了特定文件
-        if [ -f "$CONFIGS_DIR/$config_file" ]; then
-            files_to_check=("$CONFIGS_DIR/$config_file")
+        # 指定了特定文件，按路径优先级查找
+        local found_file=""
+        for path in "$(pwd)/$config_file" "$HOME/.config/switch-claude/$config_file" "$HOME/$config_file"; do
+            if [ -f "$path" ]; then
+                found_file="$path"
+                break
+            fi
+        done
+        
+        if [ -n "$found_file" ]; then
+            files_to_check=("$found_file")
         else
-            echo -e "${RED}指定的配置文件不存在: $CONFIGS_DIR/$config_file${NC}"
+            echo -e "${RED}指定的配置文件不存在: $config_file${NC}"
+            echo -e "${YELLOW}已在以下位置查找:${NC}"
+            echo "  - $(pwd)/$config_file"
+            echo "  - $HOME/.config/switch-claude/$config_file"
+            echo "  - $HOME/$config_file"
             return 1
         fi
     else
-        # 搜索所有JSON配置文件
-        for file in "$CONFIGS_DIR"/*.json; do
-            if [ -f "$file" ]; then
-                files_to_check+=("$file")
-            fi
-        done
+        # 使用新的多路径查找
+        local config_paths=($(find_config_paths))
+        if [ ${#config_paths[@]} -eq 0 ]; then
+            echo -e "${YELLOW}未找到配置文件${NC}"
+            echo ""
+            echo "请在以下任一位置创建配置文件:"
+            echo "  1. $(pwd)/config.json"
+            echo "  2. $HOME/.config/switch-claude/config.json"
+            echo "  3. $HOME/.switch-claude.json"
+            return 1
+        fi
+        files_to_check=("${config_paths[@]}")
     fi
     
     for file in "${files_to_check[@]}"; do
+        local filepath="$file"
         local filename=$(basename "$file")
         
-        echo -e "${CYAN}文件: $filename${NC}"
+        # 显示配置文件来源
+        if [[ "$file" == "$(pwd)/"* ]]; then
+            echo -e "${CYAN}文件: $filename ${YELLOW}(当前目录)${NC}"
+        elif [[ "$file" == "$HOME/.config/switch-claude/"* ]]; then
+            echo -e "${CYAN}文件: $filename ${YELLOW}(~/.config/switch-claude/)${NC}"
+        elif [[ "$file" == "$HOME/.switch-claude.json" ]]; then
+            echo -e "${CYAN}文件: $filename ${YELLOW}(用户配置)${NC}"
+        else
+            echo -e "${CYAN}文件: $filename${NC}"
+        fi
         
         local configs_data
         configs_data=$(parse_configs_file "$file")
@@ -118,11 +191,7 @@ list_configs() {
     done
     
     if [ $found -eq 0 ]; then
-        echo -e "${YELLOW}未找到有效的配置文件${NC}"
-        echo ""
-        echo "请在当前目录下创建JSON格式的配置文件，例如:"
-        echo "  ./config.json"
-        echo "  ./claude-configs.json"
+        echo -e "${YELLOW}未找到有效的配置${NC}"
     fi
 }
 
@@ -141,38 +210,47 @@ show_current() {
     local config_name="未知"
     local config_description="未设置"
     local config_found=0
+    local config_source=""
     
-    # 搜索所有JSON配置文件
-    for file in "$CONFIGS_DIR"/*.json; do
-        if [ -f "$file" ]; then
-            local configs_data
-            configs_data=$(parse_configs_file "$file")
-            if [ $? -eq 0 ]; then
-                local config_count=$(echo "$configs_data" | jq -r '. | length')
+    # 使用新的多路径查找
+    local config_paths=($(find_config_paths))
+    for file in "${config_paths[@]}"; do
+        local configs_data
+        configs_data=$(parse_configs_file "$file")
+        if [ $? -eq 0 ]; then
+            local config_count=$(echo "$configs_data" | jq -r '. | length')
+            
+            for ((i=0; i<config_count; i++)); do
+                local config=$(echo "$configs_data" | jq -r ".[$i]")
+                local cfg_base_url=$(echo "$config" | jq -r '.ANTHROPIC_BASE_URL')
+                local cfg_auth_token=$(echo "$config" | jq -r '.ANTHROPIC_AUTH_TOKEN')
                 
-                for ((i=0; i<config_count; i++)); do
-                    local config=$(echo "$configs_data" | jq -r ".[$i]")
-                    local cfg_base_url=$(echo "$config" | jq -r '.ANTHROPIC_BASE_URL')
-                    local cfg_auth_token=$(echo "$config" | jq -r '.ANTHROPIC_AUTH_TOKEN')
+                if [ "$cfg_base_url" = "$base_url" ] && [ "$cfg_auth_token" = "$auth_token" ]; then
+                    config_name=$(echo "$config" | jq -r '.name')
+                    config_description=$(echo "$config" | jq -r '.description // "无描述"')
+                    config_found=1
                     
-                    if [ "$cfg_base_url" = "$base_url" ] && [ "$cfg_auth_token" = "$auth_token" ]; then
-                        config_name=$(echo "$config" | jq -r '.name')
-                        config_description=$(echo "$config" | jq -r '.description // "无描述"')
-                        config_found=1
-                        break
+                    # 标记配置来源
+                    if [[ "$file" == "$(pwd)/"* ]]; then
+                        config_source=" ${YELLOW}(当前目录)${NC}"
+                    elif [[ "$file" == "$HOME/.config/switch-claude/"* ]]; then
+                        config_source=" ${YELLOW}(~/.config/switch-claude/)${NC}"
+                    elif [[ "$file" == "$HOME/.switch-claude.json" ]]; then
+                        config_source=" ${YELLOW}(用户配置)${NC}"
                     fi
-                done
-                
-                if [ $config_found -eq 1 ]; then
                     break
                 fi
+            done
+            
+            if [ $config_found -eq 1 ]; then
+                break
             fi
         fi
     done
     
     # 显示配置信息
     if [ $config_found -eq 1 ]; then
-        echo -e "  name: ${GREEN}$config_name${NC}"
+        echo -e "  name: ${GREEN}$config_name${NC}$config_source"
         echo -e "  description: ${CYAN}$config_description${NC}"
     fi
     
@@ -181,6 +259,11 @@ show_current() {
         echo -e "  ANTHROPIC_AUTH_TOKEN: ${GREEN}${auth_token:0:20}...${NC}"
     else
         echo -e "  ANTHROPIC_AUTH_TOKEN: ${GREEN}$auth_token${NC}"
+    fi
+    
+    if [ $config_found -eq 0 ] && [ "$base_url" != "未设置" ]; then
+        echo ""
+        echo -e "${YELLOW}警告: 当前配置不在任何配置文件中找到${NC}"
     fi
 }
 
@@ -238,24 +321,38 @@ switch_config() {
     # 确定要搜索的配置文件
     local files_to_search=()
     if [ -n "$specified_file" ]; then
-        if [ -f "$CONFIGS_DIR/$specified_file" ]; then
-            files_to_search=("$CONFIGS_DIR/$specified_file")
+        # 指定了特定文件，按路径优先级查找
+        local found_file=""
+        for path in "$(pwd)/$specified_file" "$HOME/.config/switch-claude/$specified_file" "$HOME/$specified_file"; do
+            if [ -f "$path" ]; then
+                found_file="$path"
+                break
+            fi
+        done
+        
+        if [ -n "$found_file" ]; then
+            files_to_search=("$found_file")
         else
-            echo -e "${RED}错误: 指定的配置文件不存在: $CONFIGS_DIR/$specified_file${NC}"
+            echo -e "${RED}错误: 指定的配置文件不存在: $specified_file${NC}"
+            echo -e "${YELLOW}已在以下位置查找:${NC}"
+            echo "  - $(pwd)/$specified_file"
+            echo "  - $HOME/.config/switch-claude/$specified_file"
+            echo "  - $HOME/$specified_file"
             return 1
         fi
     else
-        # 默认搜索所有JSON配置文件
-        for file in "$CONFIGS_DIR"/*.json; do
-            if [ -f "$file" ]; then
-                files_to_search+=("$file")
-            fi
-        done
-    fi
-    
-    if [ ${#files_to_search[@]} -eq 0 ]; then
-        echo -e "${RED}错误: 未找到JSON配置文件${NC}"
-        return 1
+        # 使用新的多路径查找
+        local config_paths=($(find_config_paths))
+        if [ ${#config_paths[@]} -eq 0 ]; then
+            echo -e "${RED}错误: 未找到JSON配置文件${NC}"
+            echo ""
+            echo "请在以下任一位置创建配置文件:"
+            echo "  1. $(pwd)/config.json"
+            echo "  2. $HOME/.config/switch-claude/config.json"
+            echo "  3. $HOME/.switch-claude.json"
+            return 1
+        fi
+        files_to_search=("${config_paths[@]}")
     fi
     
     # 搜索指定的配置
@@ -285,7 +382,17 @@ switch_config() {
     fi
     
     echo -e "${BLUE}正在切换到配置: ${GREEN}$config_name${NC}"
-    echo -e "${CYAN}来源文件: $(basename "$found_file")${NC}"
+    
+    # 显示配置文件来源
+    if [[ "$found_file" == "$(pwd)/"* ]]; then
+        echo -e "${CYAN}来源文件: $(basename "$found_file") ${YELLOW}(当前目录)${NC}"
+    elif [[ "$found_file" == "$HOME/.config/switch-claude/"* ]]; then
+        echo -e "${CYAN}来源文件: $(basename "$found_file") ${YELLOW}(~/.config/switch-claude/)${NC}"
+    elif [[ "$found_file" == "$HOME/.switch-claude.json" ]]; then
+        echo -e "${CYAN}来源文件: $(basename "$found_file") ${YELLOW}(用户配置)${NC}"
+    else
+        echo -e "${CYAN}来源文件: $(basename "$found_file")${NC}"
+    fi
     
     # 检查Claude设置文件是否存在
     if [ ! -f "$CLAUDE_SETTINGS_FILE" ]; then
