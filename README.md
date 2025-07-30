@@ -8,16 +8,21 @@
 ## ⚡ 极简安装（推荐全局配置）
 
 ```bash
-# 1. 安装依赖（选择你的系统）
+# 1️⃣ 安装依赖（选择你的系统）
 # Ubuntu/Debian: sudo apt-get install jq
 # macOS: brew install jq  
 # CentOS/RHEL: sudo yum install jq
 
-# 2. 下载并设置全局命令
+# 2️⃣ 下载并设置全局命令（选择一种方式）
+# 方式一：使用 curl
 sudo curl -o /usr/local/bin/switch-claude https://raw.githubusercontent.com/zdev0x/switch-claude/main/switch-claude.sh
 sudo chmod +x /usr/local/bin/switch-claude
 
-# 3. 创建全局配置目录
+# 方式二：使用 wget  
+sudo wget -O /usr/local/bin/switch-claude https://raw.githubusercontent.com/zdev0x/switch-claude/main/switch-claude.sh
+sudo chmod +x /usr/local/bin/switch-claude
+
+# 3️⃣ 创建全局配置目录
 mkdir -p ~/.config/switch-claude
 ```
 
@@ -112,7 +117,16 @@ switch-claude -h                      # 显示帮助
 A: 安装jq依赖：`sudo apt-get install jq` 或 `brew install jq`
 
 **Q: 提示 `command not found: switch-claude`**  
-A: 确保已正确下载到系统路径：`sudo curl -o /usr/local/bin/switch-claude https://raw.githubusercontent.com/zdev0x/switch-claude/main/switch-claude.sh && sudo chmod +x /usr/local/bin/switch-claude`
+A: 确保已正确下载到系统路径：
+```bash
+# 使用 curl
+sudo curl -o /usr/local/bin/switch-claude https://raw.githubusercontent.com/zdev0x/switch-claude/main/switch-claude.sh
+sudo chmod +x /usr/local/bin/switch-claude
+
+# 或使用 wget
+sudo wget -O /usr/local/bin/switch-claude https://raw.githubusercontent.com/zdev0x/switch-claude/main/switch-claude.sh  
+sudo chmod +x /usr/local/bin/switch-claude
+```
 
 **Q: 配置切换不生效**  
 A: 检查当前配置 `switch-claude -c`，或重启Claude Code
