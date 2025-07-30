@@ -3,347 +3,104 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Shell Script](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
-一个用于快速切换 Claude Code 配置的命令行工具，支持管理多个不同的 API 端点和密钥配置。
+快速切换 Claude Code 配置的命令行工具，支持多套API配置一键切换。
 
-## ✨ 功能特性
-
-- 🔧 **JSON配置格式** - 简单易读的配置文件格式
-- 🔄 **多配置管理** - 支持多个 API URL 和密钥的配置切换
-- 💾 **自动备份** - 切换前自动备份当前配置
-- 🎨 **彩色输出** - 友好的用户界面体验
-- 🔒 **安全处理** - Token 显示时自动隐藏敏感信息
-- ✅ **完整验证** - 完整的依赖检查和错误处理
-- 📁 **当前目录操作** - 直接从当前目录读取配置文件
-
-## 🚀 快速开始
-
-### 1. 克隆项目
+## ⚡ 30秒快速安装
 
 ```bash
-git clone https://github.com/zdev0x/switch-claude.git
-cd switch-claude
+# 1. 安装依赖（选择你的系统）
+# Ubuntu/Debian: sudo apt-get install jq
+# macOS: brew install jq
+# CentOS/RHEL: sudo yum install jq
+
+# 2. 下载脚本
+curl -O https://raw.githubusercontent.com/zdev0x/switch-claude/main/switch-claude.sh
+# 或者使用 wget -O switch-claude.sh https://raw.githubusercontent.com/zdev0x/switch-claude/main/switch-claude.sh
+
+# 3. 添加执行权限
+chmod +x switch-claude.sh
 ```
 
-### 2. 安装依赖
+## 🚀 三步开始使用
 
-#### Ubuntu/Debian
-```bash
-sudo apt-get update
-sudo apt-get install jq
-```
-
-#### CentOS/RHEL
-```bash
-sudo yum install epel-release
-sudo yum install jq
-```
-
-#### macOS
-```bash
-brew install jq
-```
-
-### 3. 配置文件设置
-
-在项目目录下创建或编辑 `config.json` 配置文件：
+### 1️⃣ 创建配置文件 `config.json`：
 
 ```json
 [
   {
     "name": "work",
-    "description": "工作环境配置",
+    "description": "工作配置",
     "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
-    "ANTHROPIC_AUTH_TOKEN": "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    "ANTHROPIC_AUTH_TOKEN": "你的工作API密钥"
   },
   {
     "name": "personal",
-    "description": "个人使用配置",
+    "description": "个人配置",
     "ANTHROPIC_BASE_URL": "https://ccr-dev.lfree.org/api/",
-    "ANTHROPIC_AUTH_TOKEN": "cr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  },
-  {
-    "name": "dev",
-    "description": "开发测试配置",
-    "ANTHROPIC_BASE_URL": "https://dev-api.example.com/v1/",
-    "ANTHROPIC_AUTH_TOKEN": "dev_token_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  },
-  {
-    "name": "backup",
-    "description": "备用配置",
-    "ANTHROPIC_BASE_URL": "https://backup-api.example.com/",
-    "ANTHROPIC_AUTH_TOKEN": "backup_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    "ANTHROPIC_AUTH_TOKEN": "你的个人API密钥"
   }
 ]
-
 ```
 
-### 4. 基本使用
-
+### 2️⃣ 查看配置：
 ```bash
-# 给脚本添加执行权限
-chmod +x switch-claude.sh
-
-# 查看所有可用配置
 ./switch-claude.sh -l
-
-# 切换到指定配置
-./switch-claude.sh work
-
-# 查看当前配置
-./switch-claude.sh -c
 ```
 
-## 📖 详细使用说明
+### 3️⃣ 切换配置：
+```bash
+./switch-claude.sh work      # 切换到工作配置
+./switch-claude.sh personal  # 切换到个人配置
+```
 
-### 基本命令
+## 💡 常用命令
 
 ```bash
-# 切换到指定配置
-./switch-claude.sh work
-./switch-claude.sh personal
-
-# 列出所有可用配置
-./switch-claude.sh -l
-./switch-claude.sh --list
-
-# 显示当前配置信息
-./switch-claude.sh -c
-./switch-claude.sh --current
-
-# 显示帮助信息
-./switch-claude.sh -h
-./switch-claude.sh --help
+./switch-claude.sh -l        # 列出所有配置
+./switch-claude.sh work      # 切换到work配置
+./switch-claude.sh -c        # 查看当前配置
 ```
-
-### 高级用法
-
-```bash
-# 使用指定的配置文件
-./switch-claude.sh -f my-config.json work
-./switch-claude.sh --file team-config.json dev
-
-# 列出指定文件中的配置
-./switch-claude.sh -l -f my-config.json
-
-# 组合使用
-./switch-claude.sh --file prod-config.json --list
-```
-
-## ⚙️ 配置文件格式
-
-### JSON配置结构
-
-配置文件必须是一个JSON数组，每个配置项包含以下字段：
-
-```json
-[
-  {
-    "name": "配置名称",           // 必需：配置的唯一标识符
-    "description": "配置描述",     // 可选：配置的说明文字
-    "ANTHROPIC_BASE_URL": "API地址",        // 必需：API端点URL
-    "ANTHROPIC_AUTH_TOKEN": "认证令牌"     // 必需：API密钥
-  }
-]
-```
-
-### 完整配置示例
-
-```json
-[
-  {
-    "name": "official",
-    "description": "Anthropic官方API",
-    "ANTHROPIC_BASE_URL": "https://api.anthropic.com",
-    "ANTHROPIC_AUTH_TOKEN": "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  },
-  {
-    "name": "proxy",
-    "description": "国内代理服务",
-    "ANTHROPIC_BASE_URL": "https://ccr-dev.lfree.org/api/",
-    "ANTHROPIC_AUTH_TOKEN": "cr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  },
-  {
-    "name": "dev",
-    "description": "开发测试环境",
-    "ANTHROPIC_BASE_URL": "https://dev-api.company.com/v1/",
-    "ANTHROPIC_AUTH_TOKEN": "dev_token_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  }
-]
-
-```
-
-
-## 📋 依赖环境
-
-### 必需依赖
-
-- **jq** - 用于处理JSON数据解析和转换
-
-### 验证安装
-
-```bash
-jq --version
-```
-
-## 📚 使用示例场景
-
-### 场景1：工作环境切换
-```bash
-# 上班时切换到公司配置
-./switch-claude.sh work
-
-# 下班后切换到个人配置
-./switch-claude.sh personal
-```
-
-### 场景2：开发测试
-```bash
-# 开发时使用测试环境
-./switch-claude.sh dev
-
-# 部署前切换到生产环境
-./switch-claude.sh prod
-```
-
-### 场景3：多团队配置
-```bash
-# 使用团队A的配置文件
-./switch-claude.sh -f team-a-config.json work
-
-# 使用团队B的配置文件
-./switch-claude.sh -f team-b-config.json dev
-```
-
-## 🔐 安全特性
-
-### 自动备份
-- 每次切换前自动备份当前配置
-- 备份文件带时间戳：`~/.claude/settings.json.backup.20250730_103334`
-- 可用于配置恢复
-
-### 隐私保护
-- Token显示时只显示前20个字符
-- 敏感信息用 `...` 代替
-- 配置文件权限建议设置为 `600`
-
-### 安全建议
-```bash
-# 设置配置文件权限
-chmod 600 config.json
-
-# 避免将配置文件提交到版本控制
-echo "config.json" >> .gitignore
-echo "*.json" >> .gitignore
-```
-
-## 🛠️ 故障排除
-
-### 常见问题
-
-#### 1. 依赖缺失
-```bash
-# 错误：command not found: jq
-sudo apt-get install jq
-
-# 错误：JSON格式错误
-```
-
-#### 2. 配置文件格式错误
-```bash
-# 检查JSON语法
-jq . config.json
-
-# 常见错误：配置文件不是数组格式
-# 确保配置文件是JSON数组格式
-```
-
-#### 3. 权限问题
-```bash
-# 脚本没有执行权限
-chmod +x switch-claude.sh
-
-# Claude配置文件权限问题
-chmod 644 ~/.claude/settings.json
-```
-
-#### 4. 配置不生效
-```bash
-# 检查当前配置
-./switch-claude.sh -c
-
-# 重新加载Claude Code
-# 重启终端或重新启动Claude Code进程
-```
-
-### 调试模式
-
-如果遇到问题，可以手动执行脚本的某些部分：
-
-```bash
-# 检查配置文件解析
-jq . config.json
-
-# 检查jq是否正常工作
-echo '{"test": "value"}' | jq .
-
-# 检查Claude设置文件
-cat ~/.claude/settings.json | jq .
-```
-
-## 📁 项目结构
-
-```
-switch-claude/
-├── switch-claude.sh      # 主脚本文件
-├── config.json           # JSON配置文件
-├── README.md             # 项目说明文档
-└── other-config.json     # 其他配置文件（可选）
-```
-
-## 🤝 贡献指南
-
-欢迎贡献代码和建议！
-
-1. Fork 这个项目
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开一个 Pull Request
-
-### 开发建议
-
-- 遵循现有的代码风格
-- 添加适当的注释
-- 确保脚本在不同的shell环境中都能正常工作
-- 添加必要的错误处理
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🔗 相关链接
-
-- [Claude Code 官方文档](https://docs.anthropic.com/en/docs/claude-code)
-- [JSON 语法参考](https://www.json.org/json-zh.html)
-- [jq 命令手册](https://jqlang.github.io/jq/)
-
-## 📞 支持
-
-如果您在使用过程中遇到问题或有改进建议，欢迎：
-
-- 提交 [Issue](https://github.com/zdev0x/switch-claude/issues) 反馈问题
-- 提供功能建议
-- 贡献代码改进
-
-## 📊 更新日志
-
-- **v1.3** - 只支持JSON格式，简化依赖，提升性能
-- **v1.2** - 修复bash兼容性问题，支持更多shell环境  
-- **v1.1** - 添加多配置文件支持，改进错误处理
-- **v1.0** - 初始版本，支持JSON格式
 
 ---
 
-💡 **提示**：建议将此脚本放入您的 `PATH` 环境变量中，这样就可以在任何地方使用 `switch-claude` 命令了。
+## 📋 进阶功能
 
-⭐ 如果这个项目对您有帮助，请给我们一个 Star！
+### 高级命令
+```bash
+./switch-claude.sh -f my-config.json work  # 使用指定配置文件
+./switch-claude.sh -h                      # 显示帮助
+```
+
+### 配置文件格式说明
+配置文件必须是JSON数组格式，每个配置包含：
+- `name`: 配置名称（必需）  
+- `description`: 配置描述（可选）
+- `ANTHROPIC_BASE_URL`: API地址（必需）
+- `ANTHROPIC_AUTH_TOKEN`: API密钥（必需）
+
+## 🔐 安全特性
+
+- **自动备份**: 切换前自动备份当前配置
+- **隐私保护**: Token显示时自动隐藏敏感信息  
+- **安全建议**: 设置配置文件权限 `chmod 600 config.json`
+
+## ❓ 常见问题
+
+**Q: 提示 `command not found: jq`**  
+A: 安装jq依赖：`sudo apt-get install jq` 或 `brew install jq`
+
+**Q: 配置切换不生效**  
+A: 检查当前配置 `./switch-claude.sh -c`，或重启Claude Code
+
+**Q: JSON格式错误**  
+A: 验证配置文件语法：`jq . config.json`
+
+## 📄 许可证
+
+MIT License - 查看 [LICENSE](LICENSE) 文件了解详情
+
+---
+
+💡 **提示**: 建议将脚本添加到 `PATH` 环境变量，全局使用 `switch-claude` 命令
+
+⭐ 觉得有用请给个 Star！
